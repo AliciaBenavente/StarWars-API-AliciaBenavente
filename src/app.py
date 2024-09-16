@@ -45,6 +45,8 @@ def sitemap():
 
 #     return jsonify(response_body), 200
 
+
+# USERS
 @app.route('/users', methods=['GET'])
 def get_users():
     users = Users.query.order_by(Users.name).all()
@@ -60,6 +62,7 @@ def get_user(user_id):
     else:
         return jsonify(user.serialize()), 200
 
+#  CHARACTERS
 @app.route('/characters', methods=['GET'])
 def get_characters():
     characters = Characters.query.order_by(Characters.name).all()
@@ -74,6 +77,103 @@ def get_character(character_id):
         return jsonify("ERROR: This is not the Character you are looking for"), 404
     else:
         return jsonify(character.serialize()), 200
+
+# PLANETS
+@app.route('/planets', methods=['GET'])
+def get_planets():
+    planets = Planets.query.order_by(Planets.name).all()
+    result = list(map(lambda planets: planets.serialize(), planets))
+
+    return jsonify(result), 200
+
+@app.route('/planets/<int:planet_id>', methods=['GET'])
+def get_planet(planet_id):
+    planet = Planets.query.filter_by(id=planet_id).first()
+    if planet is None:
+        return jsonify("ERROR: This is not the Planet you are looking for"), 404
+    else:
+        return jsonify(planet.serialize()), 200
+
+@app.route('/users/<int:user_id>/favorites', methods=['GET'])
+def get_user_favorites(user_id):
+    user = Users.query.filter_by(id=user_id).first()
+    if user is None:
+        return jsonify("ERROR: This is not the User you are looking for"), 404
+    
+    favorite_characters = Favorite_Character.query.filter_by(user_id=user_id).all()
+    favorite_planets = Favorite_Planet.query.filter_by(user_id=user_id).all()
+
+    favorite_characters_data = []
+    for favorite_character in favorite_characters:
+        character = Characters.query.filter_by(id=favorite_character.character_id).first()
+        favorite_characters_data.append(character.serialize())
+
+    favorite_planets_data = []
+    for favorite_planet in favorite_planets:
+        planet = Planets.query.filter_by(id=favorite_planet.planet_id).first()
+        favorite_planets_data.append(planet.serialize())
+
+    return jsonify({
+        "characters": favorite_characters_data,
+        "planets": favorite_planets_data,
+    }), 200
+
+
+@app.route('/favorite/character', methods=['POST'])
+def add_favorite_character():
+
+    body = request.get_json()
+
+    user = Users.query.get(body["user_id"])
+    if user is None:
+        return jsonify("ERROR: user_id does not exist"), 400
+
+    character = Characters.query.get(body["characters_id"])
+    if character is None:
+        return jsonify("ERROR: character_id does not exist"), 400
+
+    favorite_exist = Favorite_Character.query.filter_by(user_id=body["user_id"], characters_id=body["characters_id"]).first()
+    if favorite_exist:
+        return jsonify("ERROR: this character is already a favorite"), 400
+
+    new_favorite = Favorite_Character (
+        user_id = body["user_id"],
+        characters_id = body ["characters_id"],
+        user_characteristics = f'{user.name} likes {character.name}'
+    )
+
+    db.session.add(new_favorite)
+    db.session.commit()
+
+    return jsonify(new_favorite.serialize()), 200
+
+@app.route('/favorite/planet', methods=['POST'])
+def add_favorite_planet():
+
+    body = request.get_json()
+
+    user = Users.query.get(body["user_id"])
+    if user is None:
+        return jsonify("ERROR: user_id does not exist"), 400
+
+    planet = Planets.query.get(body["planets_id"])
+    if planet is None:
+        return jsonify("ERROR: planet_id does not exist"), 400
+
+    favorite_exist = Favorite_Planet.query.filter_by(user_id=body["user_id"], planets_id=body["planets_id"]).first()
+    if favorite_exist:
+        return jsonify("ERROR: this planet is already a favorite"), 400
+
+    new_favorite = Favorite_Planet (
+        user_id = body["user_id"],
+        planets_id = body ["planets_id"],
+        user_characteristics = f'{user.name} likes {planet.name}'
+    )
+
+    db.session.add(new_favorite)
+    db.session.commit()
+
+    return jsonify(new_favorite.serialize()), 200
 
 
 # this only runs if `$ python src/app.py` is executed
