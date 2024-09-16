@@ -47,15 +47,33 @@ def sitemap():
 
 @app.route('/users', methods=['GET'])
 def get_users():
+    users = Users.query.order_by(Users.name).all()
+    result = list(map(lambda users: users.serialize(), users))
 
-    response_body = {
-        "msg": "Hello, this is your GET /user response "
-    }
-    print(response_body)
+    return jsonify(result), 200
 
-    return jsonify(response_body), 200
+@app.route('/users/<int:user_id>', methods=['GET'])
+def get_user(user_id):
+    user = Users.query.filter_by(id=user_id).first()
+    if user is None:
+        return jsonify("ERROR: This is not the User you are looking for"), 404
+    else:
+        return jsonify(user.serialize()), 200
 
+@app.route('/characters', methods=['GET'])
+def get_characters():
+    characters = Characters.query.order_by(Characters.name).all()
+    result = list(map(lambda characters: characters.serialize(), characters))
 
+    return jsonify(result), 200
+
+@app.route('/characters/<int:character_id>', methods=['GET'])
+def get_character(character_id):
+    character = Characters.query.filter_by(id=character_id).first()
+    if character is None:
+        return jsonify("ERROR: This is not the Character you are looking for"), 404
+    else:
+        return jsonify(character.serialize()), 200
 
 
 # this only runs if `$ python src/app.py` is executed
