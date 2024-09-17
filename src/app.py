@@ -105,12 +105,13 @@ def get_user_favorites(user_id):
 
     favorite_characters_data = []
     for favorite_character in favorite_characters:
-        character = Characters.query.filter_by(id=favorite_character.character_id).first()
-        favorite_characters_data.append(character.serialize())
+        character = Characters.query.filter_by(id=favorite_character.characters_id).first()
+        if character:
+            favorite_characters_data.append(character.serialize())
 
     favorite_planets_data = []
     for favorite_planet in favorite_planets:
-        planet = Planets.query.filter_by(id=favorite_planet.planet_id).first()
+        planet = Planets.query.filter_by(id=favorite_planet.planets_id).first()
         favorite_planets_data.append(planet.serialize())
 
     return jsonify({
@@ -119,61 +120,80 @@ def get_user_favorites(user_id):
     }), 200
 
 
-@app.route('/favorite/character', methods=['POST'])
-def add_favorite_character():
+@app.route('/favorite/character/<int:characters_id>', methods=['POST'])
+def add_favorite_character(characters_id):
 
-    body = request.get_json()
+    user_id = request.json.get("user_id")
+    user = Users.query.get_or_404(user_id)
 
-    user = Users.query.get(body["user_id"])
-    if user is None:
-        return jsonify("ERROR: user_id does not exist"), 400
-
-    character = Characters.query.get(body["characters_id"])
+    character = Characters.query.get(characters_id)
     if character is None:
-        return jsonify("ERROR: character_id does not exist"), 400
-
-    favorite_exist = Favorite_Character.query.filter_by(user_id=body["user_id"], characters_id=body["characters_id"]).first()
+        return jsonify("ERROR: character_id does not exist"), 404
+    
+    favorite_exist = Favorite_Character.query.filter_by(user_id = user_id, characters_id = characters_id).first()
     if favorite_exist:
         return jsonify("ERROR: this character is already a favorite"), 400
 
     new_favorite = Favorite_Character (
-        user_id = body["user_id"],
-        characters_id = body ["characters_id"],
+        user_id = user_id,
+        characters_id = characters_id,
         user_characteristics = f'{user.name} likes {character.name}'
     )
-
+    print(new_favorite)
     db.session.add(new_favorite)
     db.session.commit()
-
+   
     return jsonify(new_favorite.serialize()), 200
 
-@app.route('/favorite/planet', methods=['POST'])
-def add_favorite_planet():
+@app.route('/favorite/planet/<int:planets_id>', methods=['POST'])
+def add_favorite_planet(planets_id):
 
-    body = request.get_json()
+    user_id = request.json.get("user_id")
+    user = Users.query.get_or_404(user_id)
 
-    user = Users.query.get(body["user_id"])
-    if user is None:
-        return jsonify("ERROR: user_id does not exist"), 400
-
-    planet = Planets.query.get(body["planets_id"])
+    planet = Planets.query.get(planets_id)
     if planet is None:
-        return jsonify("ERROR: planet_id does not exist"), 400
-
-    favorite_exist = Favorite_Planet.query.filter_by(user_id=body["user_id"], planets_id=body["planets_id"]).first()
+        return jsonify("ERROR: planet_id does not exist"), 404
+    
+    favorite_exist = Favorite_Planet.query.filter_by(user_id = user_id, planets_id = planets_id).first()
     if favorite_exist:
         return jsonify("ERROR: this planet is already a favorite"), 400
 
     new_favorite = Favorite_Planet (
-        user_id = body["user_id"],
-        planets_id = body ["planets_id"],
+        user_id = user_id,
+        planets_id = planets_id,
         user_characteristics = f'{user.name} likes {planet.name}'
     )
-
+    print(new_favorite)
     db.session.add(new_favorite)
     db.session.commit()
-
+   
     return jsonify(new_favorite.serialize()), 200
+
+
+@app.route('/favorite/character/<int:favorite_character_id>', methods=['DELETE'])
+def delete_favorite_character(favorite_character_id):
+
+    favorite_character = Favorite_Character.query.filter_by(id=favorite_character_id).first()
+    if favorite_character is None:
+        return jsonify("ERROR: This is not the character you are looking for"), 404
+
+    db.session.delete(favorite_character)
+    db.session.commit()
+
+    return jsonify(favorite_character.serialize()), 200
+
+@app.route('/favorite/planet/<int:favorite_planet_id>', methods=['DELETE'])
+def delete_favorite_planet(favorite_planet_id):
+
+    favorite_planet = Favorite_Planet.query.filter_by(id=favorite_planet_id).first()
+    if favorite_planet is None:
+        return jsonify("ERROR: This is not the planet you are looking for"), 404
+
+    db.session.delete(favorite_planet)
+    db.session.commit()
+
+    return jsonify(favorite_planet.serialize()), 200
 
 
 # this only runs if `$ python src/app.py` is executed
